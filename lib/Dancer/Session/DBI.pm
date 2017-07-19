@@ -233,7 +233,6 @@ sub destroy {
 }
 
 
-
 # Returns a dbh handle, either created from the DSN
 # or using the one passed as a DBH argument.
 sub _dbh {
@@ -241,7 +240,8 @@ sub _dbh {
     my $settings = setting('session_options');
 
     # Prefer an active DBH over a DSN.
-    return $settings->{dbh}->() if defined $settings->{dbh};
+    return $settings->{dbh}->() if defined $settings->{dbh} and ref($settings->{dbh}) eq 'CODE';
+    return $settings->{dbh} if defined $settings->{dbh} and defined $settings->{dbh}->ping;
 
     # Check the validity of the DSN if we don't have a handle
     my $valid_dsn = DBI->parse_dsn($settings->{dsn} || '');
@@ -252,8 +252,8 @@ sub _dbh {
         die "No user or password specified";
     }
 
-    # If all the details check out, return a fresh connection
-    return DBI->connect($settings->{dsn}, $settings->{user}, $settings->{password});
+    # If all the details check out, return a fresh connection and cache it
+    return $settings->{dbh} = DBI->connect($settings->{dsn}, $settings->{user}, $settings->{password});
 }
 
 
